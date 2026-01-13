@@ -210,6 +210,38 @@
             transform: scale(1.1);
         }
 
+        /* Category Presets */
+        .category-presets {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+
+        .cat-btn {
+            padding: 6px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 9px;
+            font-weight: 700;
+            cursor: pointer;
+            text-align: center;
+            color: white;
+            transition: all 0.2s;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .cat-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+        }
+
+        /* Drag & Drop Styles */
+        .section-item.dragging {
+            opacity: 0.5;
+            border: 2px dashed #7c3aed;
+        }
+
         /* Live Preview Box */
         .preview-box {
             background: rgba(0, 0, 0, 0.3);
@@ -392,40 +424,60 @@
 
         /* Theater Layout Container */
         .theater-layout {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
+            position: relative;
             width: 100%;
+            height: 100%;
+            min-height: 800px;
+            /* Big canvas */
+            overflow: auto;
+            /* Allow scrolling */
+            /* Grid background for alignment help */
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 20px 20px;
+            border-radius: 12px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
         }
 
-        /* Section Row - for multiple sections side by side */
+        /* Section Row - remove flex layout since we are going absolute */
         .section-row {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            width: 100%;
+            display: contents;
+            /* Or just remove it */
         }
 
         /* Section Block */
         .theater-section {
-            position: relative;
+            position: absolute;
+            /* Absolute positioning for drag */
             padding: 12px 15px;
-            border-radius: 12px 12px 35% 35%;
-            transition: all 0.3s;
+            transition: transform 0.1s, box-shadow 0.3s;
+            /* Faster transform for drag */
             display: flex;
             flex-direction: column;
             align-items: center;
             gap: 3px;
-            cursor: pointer;
+            cursor: move;
+            /* Move cursor */
+            user-select: none;
+            /* Prevent selection while dragging */
+            z-index: 10;
+            min-width: 80px;
+            min-height: 60px;
+        }
+
+        .theater-section:active {
+            cursor: grabbing;
+            z-index: 100;
+            /* Bring to front while dragging */
         }
 
         .theater-section:hover {
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+            filter: brightness(1.1);
         }
 
         .theater-section.selected {
-            box-shadow: 0 0 0 3px #7c3aed;
+            filter: brightness(1.2);
         }
 
         .section-label {
@@ -462,7 +514,7 @@
         .seat {
             width: 18px;
             height: 18px;
-            border-radius: 3px 3px 5px 5px;
+            border-radius: 2px;
             cursor: pointer;
             transition: all 0.2s;
             display: flex;
@@ -614,19 +666,24 @@
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">لون القسم</label>
-                    <div class="color-picker-wrapper">
-                        <input type="color" class="color-picker" id="sectionColor" value="#e57373"
-                            oninput="updatePreview()">
-                        <input type="text" class="form-input" id="sectionColorText" value="#e57373" style="flex:1">
+                    <label class="form-label">فئة السعر (إعداد مسبق)</label>
+                    <div class="category-presets" id="categoryPresets">
+                        <!-- Will be populated by JS -->
                     </div>
-                    <div class="color-presets">
-                        <div class="color-preset" style="background:#e57373" onclick="setColor('#e57373')"></div>
-                        <div class="color-preset" style="background:#ba68c8" onclick="setColor('#ba68c8')"></div>
-                        <div class="color-preset" style="background:#9575cd" onclick="setColor('#9575cd')"></div>
-                        <div class="color-preset" style="background:#7986cb" onclick="setColor('#7986cb')"></div>
-                        <div class="color-preset" style="background:#64b5f6" onclick="setColor('#64b5f6')"></div>
-                        <div class="color-preset" style="background:#4db6ac" onclick="setColor('#4db6ac')"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">لون القسم</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" class="color-picker" id="sectionColor" value="#e57373"
+                                oninput="updatePreview()">
+                            <input type="text" class="form-input" id="sectionColorText" value="#e57373" style="flex:1">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">السعر</label>
+                        <input type="number" class="form-input" id="sectionPrice" placeholder="0.00">
                     </div>
                 </div>
 
@@ -660,6 +717,19 @@
                         <input type="range" id="sectionSeatGap" min="0" max="10" value="2"
                             oninput="updateSeatGapPreview()">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">تدوير القسم: <span id="rotateVal">0</span>°</label>
+                    <input type="range" id="sectionRotation" min="-45" max="45" value="0" step="1"
+                        oninput="updateRotationPreview()">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                        <input type="checkbox" id="sectionBorder" checked>
+                        إظهار الحدود (Border)
+                    </label>
                 </div>
 
                 <!-- Live Preview -->
@@ -727,6 +797,10 @@
                 <button class="tool-btn active" id="selectTool" onclick="setTool('select')">👆 تحديد</button>
                 <button class="tool-btn" id="skipTool" onclick="setTool('skip')">⛔ تخطي</button>
                 <button class="tool-btn" id="pinTool" onclick="setTool('pin')">📌 تثبيت</button>
+                <div style="width:1px;background:rgba(255,255,255,0.2);margin:0 5px"></div>
+                <button class="tool-btn" onclick="changeZoom(-0.1)">➖</button>
+                <button class="tool-btn" onclick="changeZoom(0.1)">➕</button>
+                <button class="tool-btn" onclick="resetZoom()" title="Reset Zoom">🔍</button>
             </div>
 
             <div class="stage">
@@ -763,6 +837,38 @@
         let selectedSectionId = null;
         let editingSection = null;
         let currentTool = 'select';
+        let draggedItem = null;
+        let zoomLevel = 1;
+
+        const categories = {
+            vip: { color: "#ef4444", price: 10673.52, label: "VIP" },
+            royal: { color: "#a855f7", price: 10006.42, label: "ROYAL" },
+            diamond: { color: "#818cf8", price: 8672.23, label: "DIAMOND" },
+            platinum: { color: "#3b82f6", price: 8205.27, label: "PLATINUM" },
+            gold: { color: "#22d3ee", price: 7004.50, label: "GOLD" },
+            silver: { color: "#94a3b8", price: 5000.00, label: "SILVER" },
+            bronze: { color: "#e2e8f0", price: 3000.00, label: "BRONZE" }
+        };
+
+        function renderCategoryPresets() {
+            const container = document.getElementById('categoryPresets');
+            container.innerHTML = Object.entries(categories).map(([key, cat]) => `
+                <div class="cat-btn" style="background:${cat.color}" onclick="setCategory('${key}')">
+                    ${cat.label}
+                </div>
+            `).join('');
+        }
+
+        function setCategory(key) {
+            const cat = categories[key];
+            if (!cat) return;
+
+            document.getElementById('sectionName').value = cat.label;
+            document.getElementById('sectionColor').value = cat.color;
+            document.getElementById('sectionColorText').value = cat.color;
+            document.getElementById('sectionPrice').value = cat.price;
+            updatePreview();
+        }
 
         // Sync colors
         document.getElementById('sectionColor').addEventListener('input', function () {
@@ -818,14 +924,32 @@
             document.getElementById('skewVal').textContent = skew;
 
             const preview = document.getElementById('livePreview');
-            const curve = document.getElementById('sectionCurve').value;
-            preview.style.transform = `skewX(${skew}deg)`;
+            const rotation = document.getElementById('sectionRotation').value;
+            preview.style.transform = `skewX(${skew}deg) rotate(${rotation}deg)`;
 
             // Update selected section in real-time
             if (editingSection) {
                 const section = sections.find(s => s.id === editingSection);
                 if (section) {
                     section.skew = parseInt(skew);
+                    renderCanvas();
+                }
+            }
+        }
+
+        function updateRotationPreview() {
+            const rotation = document.getElementById('sectionRotation').value;
+            document.getElementById('rotateVal').textContent = rotation;
+
+            const preview = document.getElementById('livePreview');
+            const skew = document.getElementById('sectionSkew').value;
+            preview.style.transform = `skewX(${skew}deg) rotate(${rotation}deg)`;
+
+            // Update selected section in real-time
+            if (editingSection) {
+                const section = sections.find(s => s.id === editingSection);
+                if (section) {
+                    section.rotation = parseInt(rotation);
                     renderCanvas();
                 }
             }
@@ -872,11 +996,14 @@
         function saveSection() {
             const name = document.getElementById('sectionName').value.trim() || `Section ${sections.length + 1}`;
             const color = document.getElementById('sectionColor').value;
+            const price = parseFloat(document.getElementById('sectionPrice').value) || 0;
             const curve = parseInt(document.getElementById('sectionCurve').value);
             const skew = parseInt(document.getElementById('sectionSkew').value);
             const seatSize = parseInt(document.getElementById('sectionSeatSize').value);
             const seatGap = parseInt(document.getElementById('sectionSeatGap').value);
+            const rotation = parseInt(document.getElementById('sectionRotation').value);
             const rowIndex = parseInt(document.getElementById('sectionRowIndex').value) || 0;
+            const hasBorder = document.getElementById('sectionBorder').checked;
 
             if (editingSection) {
                 // Update existing
@@ -884,24 +1011,36 @@
                 if (section) {
                     section.name = name;
                     section.color = color;
+                    section.price = price;
                     section.curve = curve;
                     section.skew = skew;
                     section.seatSize = seatSize;
                     section.seatGap = seatGap;
+                    section.rotation = rotation;
                     section.rowIndex = rowIndex;
+                    section.hasBorder = hasBorder;
                 }
-                editingSection = null;
             } else {
-                // Add new
+                // Add new - center in view
+                const container = document.getElementById('theaterLayout');
+                const startX = (container.clientWidth / 2) - 100 + (Math.random() * 50);
+                const startY = (container.clientHeight / 4) + (Math.random() * 50);
+
                 sections.push({
                     id: Date.now(),
                     name,
                     color,
+                    price,
                     curve,
                     skew,
                     seatSize,
                     seatGap,
+                    seatGap,
+                    rotation,
                     rowIndex,
+                    hasBorder,
+                    x: startX,
+                    y: startY,
                     rows: []
                 });
             }
@@ -913,6 +1052,7 @@
 
         function resetForm() {
             document.getElementById('sectionName').value = '';
+            document.getElementById('sectionPrice').value = '';
             document.getElementById('sectionCurve').value = 0;
             document.getElementById('sectionSkew').value = 0;
             document.getElementById('sectionSeatSize').value = 18;
@@ -922,6 +1062,10 @@
             document.getElementById('skewVal').textContent = '0';
             document.getElementById('seatSizeVal').textContent = '18';
             document.getElementById('seatGapVal').textContent = '2';
+            document.getElementById('seatGapVal').textContent = '2';
+            document.getElementById('sectionRotation').value = 0;
+            document.getElementById('rotateVal').textContent = '0';
+            document.getElementById('sectionBorder').checked = true;
             document.getElementById('livePreview').style.transform = '';
             document.getElementById('livePreview').querySelectorAll('.preview-seat').forEach(s => {
                 s.style.transform = '';
@@ -949,15 +1093,19 @@
             document.getElementById('sectionName').value = section.name;
             document.getElementById('sectionColor').value = section.color;
             document.getElementById('sectionColorText').value = section.color;
+            document.getElementById('sectionPrice').value = section.price || '';
             document.getElementById('sectionCurve').value = section.curve;
             document.getElementById('sectionSkew').value = section.skew;
             document.getElementById('sectionSeatSize').value = section.seatSize || 18;
             document.getElementById('sectionSeatGap').value = section.seatGap || 2;
+            document.getElementById('sectionRotation').value = section.rotation || 0;
             document.getElementById('sectionRowIndex').value = section.rowIndex || 0;
             document.getElementById('curveVal').textContent = section.curve;
             document.getElementById('skewVal').textContent = section.skew;
             document.getElementById('seatSizeVal').textContent = section.seatSize || 18;
             document.getElementById('seatGapVal').textContent = section.seatGap || 2;
+            document.getElementById('rotateVal').textContent = section.rotation || 0;
+            document.getElementById('sectionBorder').checked = section.hasBorder !== false;
             document.getElementById('sectionFormTitle').textContent = '✏️ تعديل القسم';
             document.getElementById('saveSectionBtn').textContent = '💾 حفظ';
             document.getElementById('cancelEditBtn').style.display = 'block';
@@ -967,9 +1115,10 @@
             updateSkewPreview();
             updateSeatSizePreview();
             updateSeatGapPreview();
+            updateRotationPreview();
         }
 
-        // Render sections list
+        // Render sections list with Drag & Drop
         function renderSections() {
             const list = document.getElementById('sectionList');
             document.getElementById('sectionCount').textContent = sections.length;
@@ -980,17 +1129,65 @@
                 return;
             }
 
-            list.innerHTML = sections.map(s => `
-                <div class="section-item ${selectedSectionId === s.id ? 'selected' : ''}" onclick="selectSection(${s.id})">
+            list.innerHTML = sections.map((s, index) => `
+                <div class="section-item ${selectedSectionId === s.id ? 'selected' : ''}" 
+                     draggable="true" 
+                     data-index="${index}"
+                     onclick="selectSection(${s.id})">
+                    <div style="cursor:grab;padding-left:5px;opacity:0.5">⋮⋮</div>
                     <div class="section-color-bar" style="background:${s.color}"></div>
                     <div class="section-info">
                         <div class="section-name">${s.name}</div>
-                        <div class="section-details">${s.rows.length} صف • ${s.rows.reduce((sum, r) => sum + r.seats.length, 0)} مقعد</div>
+                        <div class="section-details">${s.rows.length} صف • ${s.price ? '$' + s.price : 'مجاني'}</div>
                     </div>
                     <button class="icon-btn" onclick="event.stopPropagation();editSection(${s.id})">✏️</button>
                     <button class="icon-btn delete" onclick="event.stopPropagation();deleteSection(${s.id})">✕</button>
                 </div>
             `).join('');
+
+            // Add Event Listeners for Drag & Drop
+            const items = list.querySelectorAll('.section-item');
+            items.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragover', handleDragOver);
+                item.addEventListener('drop', handleDrop);
+                item.addEventListener('dragend', handleDragEnd);
+            });
+        }
+
+        // Drag & Drop Handlers
+        function handleDragStart(e) {
+            draggedItem = this;
+            this.classList.add('dragging');
+            e.dataTransfer.effectAllowed = 'move';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) e.preventDefault();
+            return false;
+        }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) e.stopPropagation();
+            if (draggedItem !== this) {
+                const srcIndex = parseInt(draggedItem.getAttribute('data-index'));
+                const destIndex = parseInt(this.getAttribute('data-index'));
+
+                // Swap/Move items in array
+                const item = sections.splice(srcIndex, 1)[0];
+                sections.splice(destIndex, 0, item);
+
+                // Re-render
+                renderSections();
+                renderCanvas();
+                saveToStorage();
+            }
+            return false;
+        }
+
+        function handleDragEnd() {
+            this.classList.remove('dragging');
+            draggedItem = null;
         }
 
         // Select section for adding rows
@@ -998,6 +1195,7 @@
             selectedSectionId = id;
             renderSections();
             renderCanvas();
+            editSection(id);
 
             const section = sections.find(s => s.id === id);
             if (section) {
@@ -1090,168 +1288,198 @@
             statsBar.style.display = 'flex';
             updateStats();
 
-            // Group sections by rowIndex
-            const rowGroups = {};
+            container.innerHTML = `
+                <div id="zoomContainer" style="transform: scale(${zoomLevel}); transform-origin: top center; width: 100%; height: 100%;">
+                    ${sections.map(section => renderSection(section)).join('')}
+                </div>
+            `;
+
+            // Make sections draggable
             sections.forEach(s => {
-                const idx = s.rowIndex || 0;
-                if (!rowGroups[idx]) rowGroups[idx] = [];
-                rowGroups[idx].push(s);
+                const el = document.getElementById(`section-${s.id}`);
+                if (el) makeDraggable(el, s.id);
             });
-
-            // Sort row indices
-            const sortedIndices = Object.keys(rowGroups).map(Number).sort((a, b) => a - b);
-
-            container.innerHTML = sortedIndices.map(idx => {
-                const sectionsInRow = rowGroups[idx];
-                return `
-                    <div class="section-row">
-                        ${sectionsInRow.map(section => renderSection(section)).join('')}
-                    </div>
-                `;
-            }).join('');
         }
 
-        function calculateSectionBorderPoints(section) {
-            const points = [];
-            const seatSize = section.seatSize || 18;
-            const seatGap = section.seatGap || 2;
-            const curve = section.curve / 100;
-            const skew = section.skew;
+        function changeZoom(delta) {
+            zoomLevel = Math.max(0.3, Math.min(3, zoomLevel + delta));
+            renderCanvas();
+        }
 
-            section.rows.forEach((row, rowIndex) => {
-                const seatsArr = row.seats;
-                const aisles = row.aisles || 0;
-                let seatIndex = 0;
+        function resetZoom() {
+            zoomLevel = 1;
+            renderCanvas();
+        }
 
-                if (aisles > 0) {
-                    const groupSize = Math.ceil(seatsArr.length / (aisles + 1));
-                    for (let i = 0; i < seatsArr.length; i += groupSize) {
-                        const group = seatsArr.slice(i, i + groupSize);
-                        group.forEach((s, si) => {
-                            const globalIdx = seatIndex;
-                            const x = (globalIdx * (seatSize + seatGap)) + (aisles * 12);
-                            const normalized = seatsArr.length > 1 ? (globalIdx - (seatsArr.length - 1) / 2) / ((seatsArr.length - 1) / 2) : 0;
-                            const yOffset = Math.pow(normalized, 2) * curve * 15;
-                            const rotation = normalized * curve * 8;
-                            
-                            const rad = rotation * Math.PI / 180;
-                            const cos = Math.cos(rad);
-                            const sin = Math.sin(rad);
-                            
-                            const localX = x;
-                            const localY = rowIndex * (seatSize + 6) - yOffset;
-                            
-                            const rotatedX = localX * cos - localY * sin;
-                            const rotatedY = localX * sin + localY * cos;
-                            
-                            const skewOffset = rotatedY * Math.tan(skew * Math.PI / 180);
-                            const finalX = rotatedX + skewOffset;
-                            
-                            if (si === 0 && i === 0) {
-                                points.push({ x: finalX, y: rotatedY, row: rowIndex, side: 'left' });
-                            }
-                            if (si === group.length - 1 && i + groupSize >= seatsArr.length) {
-                                points.push({ x: finalX + seatSize, y: rotatedY, row: rowIndex, side: 'right' });
-                            }
-                            seatIndex++;
-                        });
-                    }
-                } else {
-                    seatsArr.forEach((s, i) => {
-                        const x = i * (seatSize + seatGap);
-                        const normalized = seatsArr.length > 1 ? (i - (seatsArr.length - 1) / 2) / ((seatsArr.length - 1) / 2) : 0;
-                        const yOffset = Math.pow(normalized, 2) * curve * 15;
-                        const rotation = normalized * curve * 8;
-                        
-                        const rad = rotation * Math.PI / 180;
-                        const cos = Math.cos(rad);
-                        const sin = Math.sin(rad);
-                        
-                        const localX = x;
-                        const localY = rowIndex * (seatSize + 6) - yOffset;
-                        
-                        const rotatedX = localX * cos - localY * sin;
-                        const rotatedY = localX * sin + localY * cos;
-                        
-                        const skewOffset = rotatedY * Math.tan(skew * Math.PI / 180);
-                        const finalX = rotatedX + skewOffset;
-                        
-                        if (i === 0) {
-                            points.push({ x: finalX, y: rotatedY, row: rowIndex, side: 'left' });
-                        }
-                        if (i === seatsArr.length - 1) {
-                            points.push({ x: finalX + seatSize, y: rotatedY, row: rowIndex, side: 'right' });
-                        }
-                    });
+        function makeDraggable(el, id) {
+            let isDragging = false;
+            let startX, startY, initialLeft, initialTop;
+
+            el.addEventListener('mousedown', dragStart);
+
+            function dragStart(e) {
+                // Ignore if clicking a button or input inside
+                if (e.target.tagName === 'BUTTON' || e.target.tagName === 'INPUT' || e.target.classList.contains('seat')) return;
+
+                isDragging = true;
+                const section = sections.find(s => s.id === id);
+                initialLeft = section.x || 0;
+                initialTop = section.y || 0;
+                startX = e.clientX;
+                startY = e.clientY;
+
+                el.style.zIndex = 100;
+
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', dragEnd);
+            }
+
+            function drag(e) {
+                if (!isDragging) return;
+                e.preventDefault();
+                const dx = (e.clientX - startX) / zoomLevel;
+                const dy = (e.clientY - startY) / zoomLevel;
+
+                const newX = initialLeft + dx;
+                const newY = initialTop + dy;
+
+                el.style.left = `${newX}px`;
+                el.style.top = `${newY}px`;
+
+                // Update data
+                const section = sections.find(s => s.id === id);
+                if (section) {
+                    section.x = newX;
+                    section.y = newY;
                 }
-            });
+            }
 
-            return points;
+            function dragEnd() {
+                isDragging = false;
+                el.style.zIndex = 10;
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', dragEnd);
+                saveToStorage();
+            }
         }
 
-        function generateSectionBorderPath(points) {
-            if (points.length === 0) return '';
-
-            const leftPoints = points.filter(p => p.side === 'left').sort((a, b) => b.y - a.y);
-            const rightPoints = points.filter(p => p.side === 'right').sort((a, b) => a.y - b.y);
-
-            const padding = 15;
-            const bottomPadding = 20;
-            const topPadding = 20;
-
-            if (leftPoints.length === 0 || rightPoints.length === 0) return '';
-
-            const topLeft = leftPoints[0];
-            const bottomLeft = leftPoints[leftPoints.length - 1];
-            const topRight = rightPoints[0];
-            const bottomRight = rightPoints[rightPoints.length - 1];
-
-            const startX = Math.min(topLeft.x, bottomLeft.x) - padding;
-            const endX = Math.max(topRight.x, bottomRight.x) + padding;
-            const startY = Math.min(topLeft.y, topRight.y) - topPadding;
-            const endY = Math.max(bottomLeft.y, bottomRight.y) + bottomPadding;
-
-            const cornerRadius = 30;
-            
-            let path = `M ${startX + cornerRadius} ${startY}`;
-            path += ` L ${endX - cornerRadius} ${startY}`;
-            path += ` Q ${endX} ${startY} ${endX} ${startY + cornerRadius}`;
-            path += ` L ${endX} ${endY - cornerRadius}`;
-            path += ` Q ${endX} ${endY} ${endX - cornerRadius} ${endY}`;
-            path += ` L ${startX + cornerRadius} ${endY}`;
-            path += ` Q ${startX} ${endY} ${startX} ${endY - cornerRadius}`;
-            path += ` L ${startX} ${startY + cornerRadius}`;
-            path += ` Q ${startX} ${startY} ${startX + cornerRadius} ${startY}`;
-            path += ' Z';
-
-            return path;
-        }
 
         function renderSection(section) {
-            const skewStyle = section.skew !== 0 ? `transform: skewX(${section.skew}deg);` : '';
-            const borderPoints = calculateSectionBorderPoints(section);
-            const borderPath = generateSectionBorderPath(borderPoints);
+            // Calculate section dimensions based on rows
+            const seatSize = section.seatSize || 18;
+            const seatGap = section.seatGap || 2;
+            const rowGap = 4;
+            const padding = 15;
+            const labelPadding = 25;
 
-            let svgBorder = '';
-            if (borderPath) {
-                svgBorder = `
-                    <svg style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;overflow:visible">
-                        <path d="${borderPath}" 
-                              fill="none" 
-                              stroke="${section.color}" 
-                              stroke-width="3" 
-                              stroke-linejoin="round"/>
+            // Calculate width for each row
+            const rowWidths = section.rows.map(row => {
+                const aisles = row.aisles || 0;
+                return row.seats.length * seatSize + (row.seats.length - 1) * seatGap + (aisles * 12);
+            });
+
+            const maxWidth = Math.max(...rowWidths, 60);
+            const totalHeight = section.rows.length * (seatSize + rowGap) + labelPadding;
+
+            // Build SVG path for curved border following seat shapes
+            const svgWidth = maxWidth + padding * 2 + 50; // extra for labels
+            const svgHeight = totalHeight + padding * 2;
+
+            // Calculate curve parameters
+            const curveIntensity = (section.curve || 0) / 100;
+            const skewAngle = section.skew || 0;
+            const rotationAngle = section.rotation || 0;
+
+            // Generate path points for each row
+            let pathPoints = [];
+            const centerX = svgWidth / 2;
+
+            // Top edge points (first row)
+            if (section.rows.length > 0) {
+                const firstRowWidth = rowWidths[0] || 60;
+                const leftX = centerX - firstRowWidth / 2 - 10;
+                const rightX = centerX + firstRowWidth / 2 + 10;
+                const topY = padding;
+
+                // Apply curve to top
+                const topCurveOffset = curveIntensity * 15;
+                pathPoints.push({ x: leftX, y: topY - topCurveOffset, type: 'start' });
+                pathPoints.push({ x: centerX, y: topY, type: 'top-center' });
+                pathPoints.push({ x: rightX, y: topY - topCurveOffset, type: 'top-right' });
+            }
+
+            // Right edge points (going down)
+            section.rows.forEach((row, i) => {
+                const rowWidth = rowWidths[i] || 60;
+                const y = padding + labelPadding + i * (seatSize + rowGap);
+                const rightX = centerX + rowWidth / 2 + 10;
+                const curveOffset = curveIntensity * 15;
+                pathPoints.push({ x: rightX, y: y - curveOffset, type: 'right' });
+            });
+
+            // Bottom edge
+            if (section.rows.length > 0) {
+                const lastRowWidth = rowWidths[rowWidths.length - 1] || 60;
+                const bottomY = padding + totalHeight;
+                const leftX = centerX - lastRowWidth / 2 - 10;
+                const rightX = centerX + lastRowWidth / 2 + 10;
+                const curveOffset = curveIntensity * 15;
+
+                pathPoints.push({ x: rightX, y: bottomY - curveOffset, type: 'bottom-right' });
+                pathPoints.push({ x: centerX, y: bottomY, type: 'bottom-center' });
+                pathPoints.push({ x: leftX, y: bottomY - curveOffset, type: 'bottom-left' });
+            }
+
+            // Left edge points (going up)
+            for (let i = section.rows.length - 1; i >= 0; i--) {
+                const rowWidth = rowWidths[i] || 60;
+                const y = padding + labelPadding + i * (seatSize + rowGap);
+                const leftX = centerX - rowWidth / 2 - 10;
+                const curveOffset = curveIntensity * 15;
+                pathPoints.push({ x: leftX, y: y - curveOffset, type: 'left' });
+            }
+
+            // Create SVG path with smooth curves
+            let pathD = '';
+            if (pathPoints.length > 0) {
+                pathD = `M ${pathPoints[0].x} ${pathPoints[0].y}`;
+                for (let i = 1; i < pathPoints.length; i++) {
+                    const prev = pathPoints[i - 1];
+                    const curr = pathPoints[i];
+                    // Use quadratic curves for smoother transitions
+                    const cpX = (prev.x + curr.x) / 2;
+                    const cpY = (prev.y + curr.y) / 2;
+                    pathD += ` Q ${prev.x} ${prev.y} ${cpX} ${cpY}`;
+                }
+                pathD += ' Z';
+            }
+
+            const transforms = [];
+            if (skewAngle !== 0) transforms.push(`skewX(${skewAngle}deg)`);
+            if (rotationAngle !== 0) transforms.push(`rotate(${rotationAngle}deg)`);
+
+            const transformStyle = transforms.length > 0 ? `transform: ${transforms.join(' ')};` : '';
+
+            // Border rendering logic
+            let borderSVG = '';
+            if (section.hasBorder !== false) {
+                borderSVG = `
+                    <svg width="${svgWidth}" height="${svgHeight}" style="position:absolute;top:-15px;left:50%;transform:translateX(-50%);pointer-events:none;overflow:visible">
+                        <path d="${pathD}" fill="none" stroke="${section.color}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                 `;
             }
 
             return `
-                <div class="theater-section ${selectedSectionId === section.id ? 'selected' : ''}"
-                     style="border: none; ${skewStyle}"
+                <div id="section-${section.id}" 
+                     class="theater-section ${selectedSectionId === section.id ? 'selected' : ''}"
+                     style="left:${section.x || 0}px; top:${section.y || 0}px; ${transformStyle}"
                      onclick="selectSection(${section.id})">
-                    ${svgBorder}
-                    <span class="section-label" style="background:${section.color}">${section.name}</span>
-                    ${section.rows.map(row => renderRow(section, row)).join('')}
+                    ${borderSVG}
+                
+                    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:${rowGap}px;padding-top:10px">
+                        ${section.rows.map(row => renderRow(section, row)).join('')}
+                    </div>
                 </div>
             `;
         }
@@ -1282,10 +1510,8 @@
             }
 
             return `
-                <div class="seat-row">
-                    <div class="row-label">${row.name}</div>
+                <div class="seat-row" style="justify-content: center;">
                     <div class="seats-wrapper" style="gap:${seatGap}px">${seatsHTML}</div>
-                    <div class="row-label">${row.name}</div>
                 </div>
             `;
         }
@@ -1305,12 +1531,24 @@
                 transform = `transform: translateY(-${yOffset}px) rotate(${rotation}deg);`;
             }
 
+            let background = seat.status === 'skipped' ? '' : section.color;
+            let border = 'none';
+            let color = 'white';
+            let content = seat.status === 'available' ? seat.number : '';
+
+            if (seat.status === 'selected') {
+                background = '#ffffff';
+                border = `2px solid ${section.color}`;
+                color = section.color;
+                content = '✓';
+            }
+
             return `
                 <div class="seat ${statusClass}"
-                     style="width:${seatSize}px; height:${seatSize}px; font-size:${fontSize}px; background:${seat.status === 'skipped' ? '' : section.color}; ${transform}"
+                     style="width:${seatSize}px; height:${seatSize}px; font-size:${fontSize}px; background:${background}; border:${border}; color:${color}; ${transform}"
                      onclick="event.stopPropagation();handleSeatClick(${section.id}, ${row.id}, ${seat.number})"
-                     title="صف ${row.name} - مقعد ${seat.number}">
-                    ${seat.status === 'available' ? seat.number : ''}
+                     title="مقعد ${seat.number}">
+                    ${content}
                 </div>
             `;
         }
@@ -1327,6 +1565,8 @@
                 seat.status = seat.status === 'skipped' ? 'available' : 'skipped';
             } else if (currentTool === 'pin') {
                 seat.status = seat.status === 'pinned' ? 'available' : 'pinned';
+            } else {
+                seat.status = seat.status === 'selected' ? 'available' : 'selected';
             }
 
             renderCanvas();
@@ -1418,6 +1658,7 @@
         document.getElementById('theaterName').addEventListener('input', saveToStorage);
 
         // Init
+        renderCategoryPresets();
         updatePreview();
         setTool('select');
         loadFromStorage();
